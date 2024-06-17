@@ -148,7 +148,7 @@ export default function Home() {
           Calculate the cost to send transaction to Avail
         </CardDescription>
         <CardDescription className="text-sm">
-          Paste the data you want to submit to Avail and press "Calculate"
+          {`Paste the data you want to submit to Avail and press "Calculate"`}
         </CardDescription>
       </CardHeader>
     );
@@ -208,7 +208,7 @@ export default function Home() {
 
           <CardFooter className="flex flex-col">
             <CardDescription className="text-sm mb-8">
-              If you prefer to directly use the size of you blob(s), you can put the size in kb with this format "512kb"
+              {`If you prefer to directly use the size of you blob(s), you can put the size in kb with this format "512kb"`}
             </CardDescription>
             <Button
               className="w-full rounded-full"
