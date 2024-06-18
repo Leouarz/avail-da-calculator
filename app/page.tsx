@@ -34,7 +34,7 @@ export default function Home() {
   const [selectValue, setSelectValue] = useState(selectValues[0])
   const [error, setError] = useState<string | undefined>(undefined)
   const [storageValues, setStorageValues] = useState<{ maxPerTx: number, maxPerBlock: number } | undefined>(undefined)
-  const [result, setResult] = useState<{ cost: number, nbTx: number, nbBatch: number, nbBlocks: number } | undefined>(undefined)
+  const [result, setResult] = useState<{ cost: number, nbTx: number, nbBlocks: number } | undefined>(undefined)
   const [showDetails, setShowDetails] = useState(false)
 
   function getByteSize(str: string): number {
@@ -64,7 +64,7 @@ export default function Home() {
       setShowDetails(false)
 
       let costInAvail = undefined
-      let nbBatch = 0
+      let nbBlocks = 1
 
       if (dataToSend.length === 0) throw new Error("You need to paste something to calculate the cost.")
 
@@ -94,7 +94,7 @@ export default function Home() {
         costInAvail = formatBalanceToNumber(cost.partialFee.toString())
       } else { // Blob is greater than 512kb
         // Compute information about batches and minimum nb of blocks needed
-        nbBatch = Math.ceil(byteSize / maxPerBlock) // It's the number of batch and also the number of block needed
+        nbBlocks = Math.ceil(byteSize / maxPerBlock) // It's the number of blocks needed
 
         // Split the data into chunks
         const chunks = [];
@@ -105,28 +105,15 @@ export default function Home() {
           chunks.push(chunk);
         }
         // Create the transactions
-        const transactions = chunks.map(chunk => api.tx.dataAvailability.submitData(chunk));
+        const txFirst = api.tx.dataAvailability.submitData(chunks[0])
+        const txLast = api.tx.dataAvailability.submitData(chunks[chunks.length - 1])
 
-        // Split the transactions into batches
-        const batches = [];
-        const transactionsPerBatch = Math.ceil(maxPerBlock / maxPerTx);
-        for (let i = 0; i < nbBatch; i++) {
-          const start = i * transactionsPerBatch;
-          const end = start + transactionsPerBatch;
-          const batch = transactions.slice(start, end);
-          batches.push(batch);
-        }
+        const costFirstTx = await txFirst.paymentInfo(sender)
+        const costLastTx = await txLast.paymentInfo(sender)
 
-        if (batches.length === 1) {
-          const cost = await api.tx.utility.batchAll(batches[0]).paymentInfo(sender)
-          costInAvail = formatBalanceToNumber(cost.partialFee.toString())
-        } else {
-          const costRegularBatches = await api.tx.utility.batchAll(batches[0]).paymentInfo(sender)
-          const costLastBatch = await api.tx.utility.batchAll(batches[batches.length - 1]).paymentInfo(sender)
-          costInAvail = formatBalanceToNumber(costRegularBatches.partialFee.mul(new BN(batches.length - 1)).add(costLastBatch.partialFee).toString())
-        }
+        costInAvail = formatBalanceToNumber(costFirstTx.partialFee.mul(new BN(chunks.length - 1)).add(costLastTx.partialFee).toString())
       }
-      setResult({ cost: costInAvail, nbTx: nbTransactions, nbBatch: nbBatch, nbBlocks: nbBatch > 0 ? nbBatch : 1 })
+      setResult({ cost: costInAvail, nbTx: nbTransactions, nbBlocks })
       await disconnect()
     } catch (err: any) {
       console.log(err)
@@ -232,9 +219,6 @@ export default function Home() {
                       <div>
                         {`Your data will be split in ${result.nbTx} blob${result.nbTx > 1 ? "s" : ""} / transaction${result.nbTx > 1 ? "s" : ""}`}
                       </div>
-                      {result.nbBatch > 0 && <div>
-                        {`The blobs will be grouped in ${result.nbBatch} batch${result.nbBatch > 1 ? "es" : ""}`}
-                      </div>}
                       <div>
                         {`The blobs will be sent in ${result.nbBlocks} block${result.nbBlocks > 1 ? "s" : ""}`}
                       </div>
