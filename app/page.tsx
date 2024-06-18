@@ -37,12 +37,6 @@ export default function Home() {
   const [result, setResult] = useState<{ cost: number, nbTx: number, nbBlocks: number } | undefined>(undefined)
   const [showDetails, setShowDetails] = useState(false)
 
-  function getByteSize(str: string): number {
-    const encoder = new TextEncoder();
-    const encoded = encoder.encode(str);
-    return encoded.length;
-  }
-
   const getAvailStorageValues = async (api: ApiPromise) => {
     if (storageValues === undefined) {
       const blockLength = (await api.query.system.dynamicBlockLength()).toHuman() as any
@@ -78,40 +72,31 @@ export default function Home() {
       const { maxPerBlock, maxPerTx } = await getAvailStorageValues(api)
 
       // Compute the byte size of the given string for computation
-      let byteSize = 0
+      let byteSize = dataToSend.length
       let data = dataToSend.toLowerCase()
       if (data.includes("kb") && isNumber(data.replace("kb", ''))) {
-        let dataSize = Math.ceil(Number(data.replace("kb", '')) * 1024)
-        data = "x".repeat(dataSize)
+        byteSize = Math.ceil(Number(data.replace("kb", '')) * 1024)
       }
-      byteSize = getByteSize(data)
 
       // Compute information about nb of tx
       const nbTransactions = Math.ceil(byteSize / maxPerTx)
 
       if (nbTransactions === 1) { // Blob is lower or equal to 512kb
-        const cost = await api.tx.dataAvailability.submitData(data).paymentInfo(sender)
+        const cost = await api.tx.dataAvailability.submitData("x".repeat(byteSize)).paymentInfo(sender)
         costInAvail = formatBalanceToNumber(cost.partialFee.toString())
-      } else { // Blob is greater than 512kb
+      } else {
         // Compute information about the minimum nb of blocks needed
         nbBlocks = Math.ceil(byteSize / maxPerBlock)
 
-        // Split the data into chunks
-        const chunks = [];
-        for (let i = 0; i < nbTransactions; i++) {
-          const start = i * maxPerTx;
-          const end = start + maxPerTx;
-          const chunk = data.slice(start, end);
-          chunks.push(chunk);
-        }
         // Create the transactions (We only need to create the first and last as all middle ones will be same as last)
-        const txFirst = api.tx.dataAvailability.submitData(chunks[0])
-        const txLast = api.tx.dataAvailability.submitData(chunks[chunks.length - 1])
-
+        const dataFirstTx = "x".repeat(maxPerTx)
+        const dataLastTx = "x".repeat(byteSize % maxPerTx)
+        const txFirst = api.tx.dataAvailability.submitData(dataFirstTx)
+        const txLast = api.tx.dataAvailability.submitData(dataLastTx)
         const costFirstTx = await txFirst.paymentInfo(sender)
         const costLastTx = await txLast.paymentInfo(sender)
 
-        costInAvail = formatBalanceToNumber(costFirstTx.partialFee.mul(new BN(chunks.length - 1)).add(costLastTx.partialFee).toString())
+        costInAvail = formatBalanceToNumber(costFirstTx.partialFee.mul(new BN(nbTransactions - 1)).add(costLastTx.partialFee).toString())
       }
       setResult({ cost: costInAvail, nbTx: nbTransactions, nbBlocks })
       await disconnect()
