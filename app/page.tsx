@@ -93,8 +93,8 @@ export default function Home() {
         const cost = await api.tx.dataAvailability.submitData(data).paymentInfo(sender)
         costInAvail = formatBalanceToNumber(cost.partialFee.toString())
       } else { // Blob is greater than 512kb
-        // Compute information about batches and minimum nb of blocks needed
-        nbBlocks = Math.ceil(byteSize / maxPerBlock) // It's the number of blocks needed
+        // Compute information about the minimum nb of blocks needed
+        nbBlocks = Math.ceil(byteSize / maxPerBlock)
 
         // Split the data into chunks
         const chunks = [];
@@ -104,7 +104,7 @@ export default function Home() {
           const chunk = data.slice(start, end);
           chunks.push(chunk);
         }
-        // Create the transactions
+        // Create the transactions (We only need to create the first and last as all middle ones will be same as last)
         const txFirst = api.tx.dataAvailability.submitData(chunks[0])
         const txLast = api.tx.dataAvailability.submitData(chunks[chunks.length - 1])
 
