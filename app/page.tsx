@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ApiPromise, disconnect, initialize, TURING_ENDPOINT } from "avail-js-sdk";
+import { ApiPromise, disconnect, initialize, TURING_ENDPOINT, MAINNET_ENDPOINT } from "avail-js-sdk";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { BN } from 'bn.js'
@@ -27,7 +27,7 @@ import { formatBalanceToNumber, isNumber } from "@/lib/utils";
 export const revalidate = 0;
 
 export default function Home() {
-  const selectValues = ["Turing"]
+  const selectValues = ["Mainnet", "Turing"]
 
   const [isLoading, setIsLoading] = useState(false)
   const [dataToSend, setDataToSend] = useState("")
@@ -63,7 +63,7 @@ export default function Home() {
       if (dataToSend.length === 0) throw new Error("You need to paste something to calculate the cost.")
 
       // Initialize the avail sdk api
-      const api = await initialize(TURING_ENDPOINT) // Here to change for mainnet
+      const api = await initialize(selectValue === "Turing" ? TURING_ENDPOINT : MAINNET_ENDPOINT) // Here to change for mainnet
 
       // Dummy sender
       const sender = "5CDGXH8Q9DzD3TnATTG6qm6f4yR1kbECBGUmh2XbEBQ8Jfa5"
