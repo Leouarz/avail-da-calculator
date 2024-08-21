@@ -90,7 +90,8 @@ export default function Home() {
 
         // Create the transactions (We only need to create the first and last as all middle ones will be same as last)
         const dataFirstTx = "x".repeat(maxPerTx)
-        const dataLastTx = "x".repeat(byteSize % maxPerTx)
+        let dataLastTx = "x".repeat(byteSize % maxPerTx)
+        if (dataLastTx.length === 0) dataLastTx = dataFirstTx
         const txFirst = api.tx.dataAvailability.submitData(dataFirstTx)
         const txLast = api.tx.dataAvailability.submitData(dataLastTx)
         const costFirstTx = await txFirst.paymentInfo(sender)
