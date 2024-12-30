@@ -74,8 +74,11 @@ export default function Home() {
       // Compute the byte size of the given string for computation
       let byteSize = dataToSend.length
       let data = dataToSend.toLowerCase()
-      if (data.includes("kb") && isNumber(data.replace("kb", ''))) {
+      if (data.includes("kb") && !data.includes("mb") && isNumber(data.replace("kb", ''))) {
         byteSize = Math.ceil(Number(data.replace("kb", '')) * 1024)
+      }
+      if (data.includes("mb") && !data.includes("kb") && isNumber(data.replace("mb", ''))) {
+        byteSize = Math.ceil(Number(data.replace("mb", '')) * 1024 * 1024)
       }
 
       // Compute information about nb of tx
@@ -181,7 +184,7 @@ export default function Home() {
 
           <CardFooter className="flex flex-col">
             <CardDescription className="text-sm mb-8">
-              {`If you prefer to directly use the size of you blob(s), you can put the size in kb with this format "512kb"`}
+              {`If you prefer to directly use the size of you blob(s), you can put the size in kb or mb with this format "512kb" or "2mb"`}
             </CardDescription>
             <Button
               className="w-full rounded-full"
