@@ -18,13 +18,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApiPromise, disconnect, initialize, TURING_ENDPOINT, MAINNET_ENDPOINT } from "avail-js-sdk";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { BN } from 'bn.js'
 import { formatBalanceToNumber, isNumber } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 
 export const revalidate = 0;
+const badgeLabels = ["1kb", "100kb", "1mb", "10mb", "1gb"];
 
 export default function Home() {
   const selectValues = ["Mainnet", "Turing"]
@@ -36,6 +38,7 @@ export default function Home() {
   const [storageValues, setStorageValues] = useState<{ maxPerTx: number, maxPerBlock: number } | undefined>(undefined)
   const [result, setResult] = useState<{ cost: number, nbTx: number, nbBlocks: number } | undefined>(undefined)
   const [showDetails, setShowDetails] = useState(false)
+  const [price, setPrice] = useState<number | undefined>(undefined);
 
   const getAvailStorageValues = async (api: ApiPromise) => {
     if (storageValues === undefined) {
@@ -50,7 +53,7 @@ export default function Home() {
     }
   }
 
-  const calculateCost = async () => {
+  const calculateCost = async (maybeDataToSend?: string) => {
     try {
       setIsLoading(true)
       setError(undefined)
@@ -60,7 +63,7 @@ export default function Home() {
       let costInAvail = undefined
       let nbBlocks = 1
 
-      if (dataToSend.length === 0) throw new Error("You need to paste something to calculate the cost.")
+      if (dataToSend.length === 0 && maybeDataToSend?.length === 0) throw new Error("You need to paste something to calculate the cost.")
 
       // Initialize the avail sdk api
       const api = await initialize(selectValue === "Turing" ? TURING_ENDPOINT : MAINNET_ENDPOINT) // Here to change for mainnet
@@ -72,8 +75,8 @@ export default function Home() {
       const { maxPerBlock, maxPerTx } = await getAvailStorageValues(api)
 
       // Compute the byte size of the given string for computation
-      let byteSize = dataToSend.length
-      let data = dataToSend.toLowerCase()
+      let byteSize = maybeDataToSend?.length || dataToSend.length
+      let data = maybeDataToSend?.toLowerCase() || dataToSend.toLowerCase()
       if (data.includes("kb") && !data.includes("mb") && isNumber(data.replace("kb", ''))) {
         byteSize = Math.ceil(Number(data.replace("kb", '')) * 1024)
       }
@@ -115,6 +118,16 @@ export default function Home() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    const fetchPrice = async () => {
+      const res = await fetch('/api/price')
+      const data = await res.json()
+      setPrice(data.price)
+    };
+
+    fetchPrice()
+  }, []);
 
   const AvailCardHeader = () => {
     return (
@@ -183,9 +196,24 @@ export default function Home() {
           </CardContent>
 
           <CardFooter className="flex flex-col">
-            <CardDescription className="text-sm mb-8">
+            <CardDescription className="text-sm">
               {`If you prefer to directly use the size of you blob(s), you can put the size in kb or mb with this format "512kb" or "2mb"`}
             </CardDescription>
+            <div className="flex flex-wrap justify-center gap-4 my-4">
+              {badgeLabels.map((label, index) => (
+                <Badge
+                  key={index}
+                  onClick={() => {
+                    let data = label.includes("1gb") ? "1000mb" : label
+                    setDataToSend(data)
+                    calculateCost(data)
+                  }}
+                  className="cursor-pointer border border-blue-500 bg-transparent text-blue-500 px-4 py-2 rounded-lg shadow-sm hover:bg-blue-100 transition-all duration-200 ease-in-out"
+                >
+                  {label}
+                </Badge>
+              ))}
+            </div>
             <Button
               className="w-full rounded-full"
               onClick={() => calculateCost()}
@@ -198,7 +226,7 @@ export default function Home() {
               <>
                 <div className="border rounded border-blue-500 p-4 mt-2 w-full">
                   <div className="text-blue-500 text-lg">
-                    {`Sending this data will cost ${result.cost} AVAIL`}
+                    {`Sending this data will cost ${result.cost} AVAIL ${price ? `(≃${(price * result.cost).toFixed(3)}$)` : ''}`}
                   </div>
                   <div className="underline cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
                     {!showDetails ? `Details` : `Hide details`}
