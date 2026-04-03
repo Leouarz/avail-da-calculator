@@ -20,12 +20,11 @@ import {
 import { ApiPromise, disconnect, initialize, TURING_ENDPOINT, MAINNET_ENDPOINT } from "avail-js-sdk";
 import { useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { BN } from 'bn.js'
+import BN from "bn.js";
 import { formatBalanceToNumber, isNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 
-export const revalidate = 0;
 const badgeLabels = ["1kb", "100kb", "1mb", "10mb", "1gb"];
 
 export default function Home() {
